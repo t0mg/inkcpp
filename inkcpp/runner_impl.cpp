@@ -57,6 +57,7 @@ value* runner_impl::get_var<runner_impl::Scope::GLOBAL>(hash_t variableName)
 }
 
 template<>
+template<>
 value* runner_impl::get_var<runner_impl::Scope::LOCAL>(hash_t variableName)
 {
 	value* ret = _stack.get(variableName);
@@ -65,8 +66,24 @@ value* runner_impl::get_var<runner_impl::Scope::LOCAL>(hash_t variableName)
 	}
 	if (ret->type() == value_type::value_pointer) {
 		auto [name, ci] = ret->get<value_type::value_pointer>();
-		inkAssert(ci == 0, "only Global pointer are allowd on the _stack!");
-		return get_var<runner_impl::Scope::GLOBAL>(name);
+		// if ci == 0, it's global
+		if (ci == 0) {
+		    return get_var<runner_impl::Scope::GLOBAL>(name);
+		} else {
+		    // follow pointers
+		    value* local_ret = _stack.get_from_frame(ci, name);
+		    if (!local_ret) local_ret = _stack.get(name);
+		    if (!local_ret && ci == -1) local_ret = get_var<runner_impl::Scope::GLOBAL>(name);
+
+		    while (local_ret && local_ret->type() == value_type::value_pointer) {
+		        auto [n2, c2] = local_ret->get<value_type::value_pointer>();
+		        if (c2 == 0) return get_var<runner_impl::Scope::GLOBAL>(n2);
+		        local_ret = _stack.get_from_frame(c2, n2);
+		        if (!local_ret) local_ret = _stack.get(n2);
+		        if (!local_ret && c2 == -1) local_ret = get_var<runner_impl::Scope::GLOBAL>(n2);
+		    }
+		    return local_ret;
+		}
 	}
 	return ret;
 }
@@ -128,23 +145,54 @@ void runner_impl::set_var<runner_impl::Scope::LOCAL>(
 			if (dref == nullptr) {
 				value v   = val;
 				auto  ref = v.get<value_type::value_pointer>();
-				v.set<value_type::value_pointer>(ref.name, 0);
+				v.set<value_type::value_pointer>(ref.name, -1);
 				_stack.set(variableName, v);
+				_ref_stack.set(variableName, v);
 			} else {
 				_ref_stack.set(variableName, val);
 				_stack.set(variableName, *dref);
 			}
 		}
 	} else {
-		if (is_redef) {
-			value* src = _stack.get(variableName);
-			inkAssert(src != nullptr, "Tried to redefine a non existing local variable.");
+		// Even if is_redef is false, if the variable exists and is a pointer, we must update the origin!
+		value* src = _stack.get(variableName);
+		if (src != nullptr) {
 			if (src->type() == value_type::value_pointer) {
 				auto [name, ci] = src->get<value_type::value_pointer>();
-				inkAssert(ci == 0, "Only global pointer are allowed on _stack!");
-				set_var<Scope::GLOBAL>(
-				    name, get_var<Scope::GLOBAL>(name)->redefine(val, _globals->lists()), true
-				);
+				if (ci == 0) {
+					set_var<Scope::GLOBAL>(
+					    name, get_var<Scope::GLOBAL>(name)->redefine(val, _globals->lists()), true
+					);
+				} else {
+					value* origin = _stack.get_from_frame(ci, name);
+					if (origin == nullptr) {
+					    origin = _stack.get(name);
+					}
+					// check if global!
+					if (origin == nullptr && ci == -1) {
+					    origin = get_var<Scope::GLOBAL>(name);
+					}
+
+					// actually, there's a pointer chain.
+					while (origin && origin->type() == value_type::value_pointer) {
+					    auto [n2, c2] = origin->get<value_type::value_pointer>();
+					    if (c2 == 0) {
+					        origin = get_var<Scope::GLOBAL>(n2);
+					        break;
+					    }
+					    value* next_origin = _stack.get_from_frame(c2, n2);
+					    if (!next_origin) next_origin = _stack.get(n2);
+					    if (!next_origin && c2 == -1) next_origin = get_var<Scope::GLOBAL>(n2);
+					    origin = next_origin;
+					}
+
+					if (origin) {
+					    *origin = origin->redefine(val, _globals->lists());
+					} else {
+					    inkAssert(false, "Could not find original variable for reference!");
+					}
+				}
+				// We keep the pointer in `_stack` so that `push_values` will know it's a reference!
 			} else {
 				_stack.set(variableName, src->redefine(val, _globals->lists()));
 			}
@@ -152,6 +200,37 @@ void runner_impl::set_var<runner_impl::Scope::LOCAL>(
 			_stack.set(variableName, val);
 		}
 	}
+}
+
+template<>
+value* runner_impl::get_var<runner_impl::Scope::LOCAL>(hash_t variableName)
+{
+	value* ret = _stack.get(variableName);
+	if (! ret) {
+		return nullptr;
+	}
+	if (ret->type() == value_type::value_pointer) {
+		auto [name, ci] = ret->get<value_type::value_pointer>();
+		// if ci == 0, it's global
+		if (ci == 0) {
+		    return get_var<runner_impl::Scope::GLOBAL>(name);
+		} else {
+		    // follow pointers
+		    value* local_ret = _stack.get_from_frame(ci, name);
+		    if (!local_ret) local_ret = _stack.get(name);
+		    if (!local_ret && ci == -1) local_ret = get_var<runner_impl::Scope::GLOBAL>(name);
+
+		    while (local_ret && local_ret->type() == value_type::value_pointer) {
+		        auto [n2, c2] = local_ret->get<value_type::value_pointer>();
+		        if (c2 == 0) return get_var<runner_impl::Scope::GLOBAL>(n2);
+		        local_ret = _stack.get_from_frame(c2, n2);
+		        if (!local_ret) local_ret = _stack.get(n2);
+		        if (!local_ret && c2 == -1) local_ret = get_var<runner_impl::Scope::GLOBAL>(n2);
+		    }
+		    return local_ret;
+		}
+	}
+	return ret;
 }
 
 template<>

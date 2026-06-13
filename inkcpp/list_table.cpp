@@ -394,13 +394,7 @@ list_table::list list_table::sub(list lh, list_flag rh)
 			return res;
 		}
 	}
-	setList(l, rh.list_id, false);
-	for (size_t i = 0; i < numLists(); ++i) {
-		if (hasList(o, i)) {
-			return res;
-		}
-	}
-	copy_lists(l, o);
+	setList(o, rh.list_id, false);
 	return res;
 }
 
