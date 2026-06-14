@@ -395,6 +395,12 @@ list_table::list list_table::sub(list lh, list_flag rh)
 		}
 	}
 	setList(o, rh.list_id, false);
+	for (size_t i = 0; i < numLists(); ++i) {
+		if (hasList(o, i)) {
+			return res;
+		}
+	}
+	copy_lists(l, o);
 	return res;
 }
 
@@ -532,14 +538,16 @@ int32_t list_table::count(list l) const
 list_flag list_table::min(list l) const
 {
 	list_flag     res{-1, -1};
+	int           min_value = -1;
 	const data_t* data = getPtr(l.lid);
 	for (size_t i = 0; i < numLists(); ++i) {
 		if (hasList(data, i)) {
 			for (size_t j = listBegin(i); j < _list_end[i]; ++j) {
 				if (hasFlag(data, j)) {
 					int value = _flag_values[j];
-					if (res.flag < 0 || value < res.flag) {
-						res.flag    = static_cast<int16_t>(value);
+					if (res.flag < 0 || value < min_value) {
+						min_value   = value;
+						res.flag    = static_cast<int16_t>(j - listBegin(i));
 						res.list_id = static_cast<int16_t>(i);
 					}
 					break;
@@ -553,14 +561,16 @@ list_flag list_table::min(list l) const
 list_flag list_table::max(list l) const
 {
 	list_flag     res{-1, -1};
+	int           max_value = -1;
 	const data_t* data = getPtr(l.lid);
 	for (size_t i = 0; i < numLists(); ++i) {
 		if (hasList(data, i)) {
 			for (size_t j = _list_end[i] - 1; j != ~0U && j >= listBegin(i); --j) {
 				if (hasFlag(data, j)) {
 					int value = _flag_values[j];
-					if (value > res.flag) {
-						res.flag    = static_cast<int16_t>(value);
+					if (res.flag < 0 || value > max_value) {
+						max_value   = value;
+						res.flag    = static_cast<int16_t>(j - listBegin(i));
 						res.list_id = static_cast<int16_t>(i);
 					}
 					break;
