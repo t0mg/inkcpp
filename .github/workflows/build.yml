@@ -44,7 +44,7 @@ jobs:
     steps:
 
     # Checkout project
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         submodules: true
 
@@ -88,7 +88,7 @@ jobs:
       shell: bash
       run: cmake --install . --config $BUILD_TYPE --prefix comp_cl --component cl
     - name: Upload Cl
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ matrix.artifact }}-cl
         path: build/comp_cl/
@@ -98,7 +98,7 @@ jobs:
       shell: bash
       run: cmake --install . --config $BUILD_TYPE --prefix comp_lib --component lib
     - name: Upload Lib
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ matrix.artifact }}-lib
         path: build/comp_lib/
@@ -108,7 +108,7 @@ jobs:
       shell: bash
       run: cmake --install . --config $BUILD_TYPE --prefix comp_clib --component clib
     - name: Upload Clib
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{matrix.artifact}}-clib
         path: build/comp_clib
@@ -118,35 +118,35 @@ jobs:
       working-directory: ${{github.workspace}}/build
       shell: bash
       run: |
-        cmake $GITHUB_WORKSPACE -DINKCPP_UNREAL_TARGET_VERSION="5.7" -DINKCPP_UNREAL=ON
+        cmake $GITHUB_WORKSPACE -DINKCPP_UNREAL_TARGET_VERSION="5.7" -DINKCPP_UNREAL=ON -DINKCPP_INKLECATE=NONE
         cmake --install . --config $BUILD_TYPE --prefix comp_unreal_5_7 --component unreal
-        cmake $GITHUB_WORKSPACE -DINKCPP_UNREAL_TARGET_VERSION="5.6" -DINKCPP_UNREAL=ON
+        cmake $GITHUB_WORKSPACE -DINKCPP_UNREAL_TARGET_VERSION="5.6" -DINKCPP_UNREAL=ON -DINKCPP_INKLECATE=NONE
         cmake --install . --config $BUILD_TYPE --prefix comp_unreal_5_6 --component unreal
-        cmake $GITHUB_WORKSPACE -DINKCPP_UNREAL_TARGET_VERSION="5.5" -DINKCPP_UNREAL=ON
+        cmake $GITHUB_WORKSPACE -DINKCPP_UNREAL_TARGET_VERSION="5.5" -DINKCPP_UNREAL=ON -DINKCPP_INKLECATE=NONE
         cmake --install . --config $BUILD_TYPE --prefix comp_unreal_5_5 --component unreal
-        cmake $GITHUB_WORKSPACE -DINKCPP_UNREAL_TARGET_VERSION="5.4" -DINKCPP_UNREAL=ON
+        cmake $GITHUB_WORKSPACE -DINKCPP_UNREAL_TARGET_VERSION="5.4" -DINKCPP_UNREAL=ON -DINKCPP_INKLECATE=NONE
         cmake --install . --config $BUILD_TYPE --prefix comp_unreal_5_4 --component unreal
     - name: Upload UE 5.7
       if: ${{ matrix.unreal }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: unreal_5_7
         path: build/comp_unreal_5_7/
     - name: Upload UE 5.6
       if: ${{ matrix.unreal }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: unreal_5_6
         path: build/comp_unreal_5_6/
     - name: Upload UE 5.5
       if: ${{ matrix.unreal }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: unreal_5_5
         path: build/comp_unreal_5_5/
     - name: Upload UE 5.4
       if: ${{ matrix.unreal }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: unreal_5_4
         path: build/comp_unreal_5_4/
@@ -183,7 +183,7 @@ jobs:
 
     # Upload results artifact
     - name: Upload Results Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: result-${{ matrix.artifact }}
         path: proofing/ink-proof/${{ matrix.artifact }}.txt
@@ -191,7 +191,7 @@ jobs:
     # Upload website artifact
     - name: Upload Ink-Proof Website Artifact
       if: ${{ matrix.proof }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ matrix.artifact }}-www
         path: proofing/ink-proof/out
@@ -200,8 +200,10 @@ jobs:
     name: Build Doxygen documentation
     needs: [compilation, build-python]
     runs-on: ubuntu-latest
+    env:
+      DOXYGEN_VERSION: "1.17.0"
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         submodules: true
     - name: Set upt Python
@@ -215,13 +217,19 @@ jobs:
         pybind11-stubgen
         pdoc
         --user
+    - uses: actions/cache@v5
+      id: cache-doxygen
+      with:
+        path: doxygen-${{ env.DOXYGEN_VERSION }}.linux.bin.tar.gz
+        key: doxygen-${{ env.DOXYGEN_VERSION }}
+    - name: download Doxygen
+      if: steps.cache-doxygen.outputs.cache-hit != 'true'
+      run: wget https://www.doxygen.nl/files/doxygen-$DOXYGEN_VERSION.linux.bin.tar.gz
     - name: Install Doxygen
       run: |
         sudo apt-get install graphviz -y
-        wget https://www.doxygen.nl/files/doxygen-1.10.0.linux.bin.tar.gz
-        gunzip doxygen-*.tar.gz
-        tar xf doxygen-*.tar
-        cd doxygen-1.10.0/
+        tar xzf doxygen-$DOXYGEN_VERSION.linux.bin.tar.gz
+        cd doxygen-$DOXYGEN_VERSION/
         sudo make install
     - name: Setup cmake
       uses: jwlawson/actions-setup-cmake@v2
@@ -238,7 +246,7 @@ jobs:
       shell: bash
       run: cmake --build . --target doc --config Release
     - name: Upload
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: doxygen
         path: Documentation/
@@ -248,7 +256,7 @@ jobs:
     needs: compilation
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         submodules: true
     - name: Set up Python
@@ -288,7 +296,7 @@ jobs:
       run: |
         rm dist/*.whl
     - name: Upload Python files
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: python-package-distribution
         path: dist/
@@ -298,7 +306,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'master' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Fetch master branch
         run: |
           git fetch origin master
@@ -321,7 +329,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # Download Ink Proof page for Linux
       - uses: actions/download-artifact@v4
