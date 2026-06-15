@@ -17,7 +17,7 @@ namespace ink::runtime::internal
 globals_impl::globals_impl(const story_impl* story)
     : _num_containers(story->num_containers())
     , _turn_cnt{0}
-    , _visit_counts(visit_count(), visit_count_null_value)
+    , _visit_counts(visit_count(), visit_count_null_value())
     , _owner(story)
     , _runners_start(nullptr)
     , _lists(story->list_meta())

@@ -288,7 +288,7 @@ public:
 	template<typename F>
 	inline void bind(hash_t name, F function, bool lookaheadSafe = false)
 	{
-		internal_bind(name, new internal::function(function, lookaheadSafe));
+		internal_bind(name, new internal::function<F>(function, lookaheadSafe));
 	}
 
 	/**

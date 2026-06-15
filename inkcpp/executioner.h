@@ -67,8 +67,8 @@ public:
 
 	template<typename T>
 	typed_executer(const T& t)
-	    : _typed_exe{t}
-	    , _op{t}
+	    : _typed_exe(t)
+	    , _op(t)
 	{
 	}
 
@@ -135,15 +135,16 @@ class executer_imp
 public:
 	template<typename T>
 	executer_imp(const T& t)
-	    : _exe{t}
-	    , _typed_exe{t}
+	    : _exe(t)
+	    , _typed_exe(t)
 	{
 	}
+
+	static constexpr size_t N = command_num_args(cmd);
 
 	void operator()(Command c, basic_eval_stack& s)
 	{
 		if (c == cmd) {
-			static constexpr size_t N = command_num_args(cmd);
 			if constexpr (N == 0) {
 				value_type ty = casting::common_base<0>(nullptr);
 				_typed_exe(ty, s, nullptr);
@@ -152,7 +153,7 @@ public:
 				for (int i = command_num_args(cmd) - 1; i >= 0; --i) {
 					args[i] = s.pop();
 				}
-				value_type ty = casting::common_base<N>(args);
+				value_type ty = casting::common_base<N>(static_cast<const value*>(args));
 				_typed_exe(ty, s, args);
 			}
 		} else {

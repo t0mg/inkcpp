@@ -125,6 +125,9 @@ private:
 		uint32_t visits = 0;
 		int32_t  turns  = -1;
 
+		constexpr visit_count() = default;
+		constexpr visit_count(uint32_t v, int32_t t) : visits(v), turns(t) {}
+
 		bool operator==(const visit_count& vc) const
 		{
 			return visits == vc.visits && turns == vc.turns;
@@ -133,7 +136,7 @@ private:
 		bool operator!=(const visit_count& vc) const { return ! (*this == vc); }
 	};
 
-	static constexpr visit_count visit_count_null_value{~0U, -2};
+	static constexpr visit_count visit_count_null_value() { return visit_count(~0U, -2); }
 
 	internal::allocated_restorable_array<visit_count> _visit_counts;
 

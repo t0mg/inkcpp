@@ -14,6 +14,10 @@
 #	include "HAL/UnrealMemory.h"
 #	include "Hash/CityHash.h"
 #endif
+
+#include <limits>
+#include <cctype>
+
 #ifdef INK_ENABLE_STL
 #	ifdef INK_ENABLE_EXCEPTIONS
 #		include <exception>
@@ -358,19 +362,19 @@ public:
 
 	constexpr bool has_value() const { return _has_value; }
 
-	constexpr T& value()
+	T& value()
 	{
 		test_value();
 		return _value;
 	}
 
-	constexpr const T& value() const
+	const T& value() const
 	{
 		test_value();
 		return _value;
 	}
 
-	constexpr operator bool() const { return has_value(); }
+	operator bool() const { return has_value(); }
 
 	template<typename U>
 	constexpr T value_or(U&& u) const

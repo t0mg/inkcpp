@@ -638,6 +638,10 @@ void runner_impl::choose(size_t index)
 	jump(_story->instructions() + c.path(), true, false);
 	clear_choices();
 	_entered_knot = false;
+
+	if (_saved) {
+		forget();
+	}
 }
 
 void runner_impl::getline_silent()
@@ -1425,6 +1429,10 @@ void runner_impl::step()
 					}
 #endif
 
+					if (val == nullptr) {
+						printf("ERROR: Could not find variable hash: %u\n", variableName);
+						_stack.print_dump();
+					}
 					inkAssert(val != nullptr, "Could not find variable!");
 					_eval.push(*val);
 					break;
