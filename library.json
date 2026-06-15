@@ -1,0 +1,21 @@
+{
+    "name": "inkcpp",
+    "version": "1.0.0",
+    "description": "InkCPP - Inkle Ink C++ Runtime (adapted for PlatformIO)",
+    "license": "MIT",
+    "build": {
+        "srcFilter": [
+            "+<inkcpp/*.cpp>",
+            "+<inkcpp/collections/*.cpp>",
+            "+<shared/private/*.cpp>"
+        ],
+        "includeDir": ".",
+        "flags": [
+            "-Iinkcpp/include",
+            "-Ishared/public",
+            "-Ishared/private",
+            "-Iinkcpp",
+            "-Iinkcpp/collections"
+        ]
+    }
+}
