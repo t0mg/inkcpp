@@ -65,8 +65,23 @@ value* runner_impl::get_var<runner_impl::Scope::LOCAL>(hash_t variableName)
 	}
 	if (ret->type() == value_type::value_pointer) {
 		auto [name, ci] = ret->get<value_type::value_pointer>();
-		inkAssert(ci == 0, "only Global pointer are allowd on the _stack!");
-		return get_var<runner_impl::Scope::GLOBAL>(name);
+		if (ci == 0) {
+		    return get_var<runner_impl::Scope::GLOBAL>(name);
+		} else {
+		    value* local_ret = _stack.get_from_frame(ci, name);
+		    if (!local_ret) local_ret = _stack.get(name);
+		    if (!local_ret && ci == -1) local_ret = get_var<runner_impl::Scope::GLOBAL>(name);
+
+		    while (local_ret && local_ret->type() == value_type::value_pointer) {
+		        auto [n2, c2] = local_ret->get<value_type::value_pointer>();
+		        if (c2 == 0) return get_var<runner_impl::Scope::GLOBAL>(n2);
+		        value* next_ret = _stack.get_from_frame(c2, n2);
+		        if (!next_ret) next_ret = _stack.get(n2);
+		        if (!next_ret && c2 == -1) next_ret = get_var<runner_impl::Scope::GLOBAL>(n2);
+		        local_ret = next_ret;
+		    }
+		    return local_ret;
+		}
 	}
 	return ret;
 }
@@ -128,8 +143,9 @@ void runner_impl::set_var<runner_impl::Scope::LOCAL>(
 			if (dref == nullptr) {
 				value v   = val;
 				auto  ref = v.get<value_type::value_pointer>();
-				v.set<value_type::value_pointer>(ref.name, 0);
+				v.set<value_type::value_pointer>(ref.name, -1);
 				_stack.set(variableName, v);
+				_ref_stack.set(variableName, v);
 			} else {
 				_ref_stack.set(variableName, val);
 				_stack.set(variableName, *dref);
@@ -141,10 +157,37 @@ void runner_impl::set_var<runner_impl::Scope::LOCAL>(
 			inkAssert(src != nullptr, "Tried to redefine a non existing local variable.");
 			if (src->type() == value_type::value_pointer) {
 				auto [name, ci] = src->get<value_type::value_pointer>();
-				inkAssert(ci == 0, "Only global pointer are allowed on _stack!");
-				set_var<Scope::GLOBAL>(
-				    name, get_var<Scope::GLOBAL>(name)->redefine(val, _globals->lists()), true
-				);
+				if (ci == 0) {
+					set_var<Scope::GLOBAL>(
+					    name, get_var<Scope::GLOBAL>(name)->redefine(val, _globals->lists()), true
+					);
+				} else {
+					value* origin = _stack.get_from_frame(ci, name);
+					if (origin == nullptr) {
+					    origin = _stack.get(name);
+					}
+					if (origin == nullptr && ci == -1) {
+					    origin = get_var<Scope::GLOBAL>(name);
+					}
+
+					while (origin && origin->type() == value_type::value_pointer) {
+					    auto [n2, c2] = origin->get<value_type::value_pointer>();
+					    if (c2 == 0) {
+					        origin = get_var<Scope::GLOBAL>(n2);
+					        break;
+					    }
+					    value* next_origin = _stack.get_from_frame(c2, n2);
+					    if (!next_origin) next_origin = _stack.get(n2);
+					    if (!next_origin && c2 == -1) next_origin = get_var<Scope::GLOBAL>(n2);
+					    origin = next_origin;
+					}
+
+					if (origin) {
+					    *origin = origin->redefine(val, _globals->lists());
+					} else {
+					    inkAssert(false, "Could not find original variable for reference!");
+					}
+				}
 			} else {
 				_stack.set(variableName, src->redefine(val, _globals->lists()));
 			}

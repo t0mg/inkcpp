@@ -144,3 +144,20 @@ SCENARIO("run a story with lists", "[lists][runtime]")
 		}
 	}
 }
+
+SCENARIO("list reference popping", "[lists][runtime]")
+{
+	GIVEN("a story passing a list by reference to pop its elements")
+	{
+		std::unique_ptr<story> ink{story::from_file(INK_TEST_RESOURCE_DIR "ListPopRef.bin")};
+		runner                 thread = ink->new_runner();
+		WHEN("running the story")
+		{
+			std::string out = thread->getall();
+			THEN("it should correctly mutate the list reference and pop all elements in sequence without looping infinitely")
+			{
+				REQUIRE(out == "Item: Key\nItem: Torch\nItem: Amulet\n");
+			}
+		}
+	}
+}
