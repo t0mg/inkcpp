@@ -354,8 +354,8 @@ void runner_impl::jump(ip_t dest, bool record_visits, bool track_knot_visit, boo
 	const container_data_t& dest_container = _story->container_data(dest_id);
 	if (dest_offset == dest_container._start_offset) {
 		// Record direct jump to non-knot if requested. (Knots handled below.)
-		if (record_visits && ! dest_container.knot()) {
-			_globals->visit(dest_id, preserve_turns);
+		if (! preserve_turns && record_visits && ! dest_container.knot()) {
+			_globals->visit(dest_id);
 		}
 
 		// Consume instruction so we don't process it again during normal flow. (We need to do this here
@@ -387,8 +387,8 @@ void runner_impl::jump(ip_t dest, bool record_visits, bool track_knot_visit, boo
 			//
 			// Ink has a rule about incrementing visit counts when you jump to the top of a knot, which
 			// seems to need to override inkcpp's knot_visit flag.
-			if (track_knot_visit || container._start_offset == dest_offset) {
-				_globals->visit(id, preserve_turns);
+			if (! preserve_turns && (track_knot_visit || container._start_offset == dest_offset)) {
+				_globals->visit(id);
 			}
 
 			// If tracking, update with the first knot we encounter, which is the one closest to the top
@@ -425,9 +425,15 @@ void runner_impl::start_frame(uint32_t target)
 	}
 	_evaluation_mode = false; // unset eval mode when enter function or tunnel
 
+	// Always record visits
+	const bool record_visits = true;
+
+	// Do we visit the knot? We need to visit anything that can have knot tags.
+	const bool track_knot_visit = type != frame_type::function;
+
 	// Do the jump
 	inkAssert(_story->instructions() + target < _story->end(), "Diverting past end of story data!");
-	jump(_story->instructions() + target, true, false);
+	jump(_story->instructions() + target, record_visits, track_knot_visit);
 }
 
 frame_type runner_impl::execute_return()
@@ -461,13 +467,21 @@ frame_type runner_impl::execute_return()
 		}
 	}
 
+	// Never record visits
+	const bool record_visits = false;
+
+	// Do we visit the knot? This needs to match what we tracked in start_frame.
+	const bool track_knot_visit = type != frame_type::function;
+
+	// Returns should never update visit counts.
+	const bool preserve_turns = true;
 
 	// Jump to the old offset
 	inkAssert(
 	    _story->instructions() + offset < _story->end(),
 	    "Callstack return is outside bounds of story!"
 	);
-	jump(_story->instructions() + offset, false, false);
+	jump(_story->instructions() + offset, record_visits, track_knot_visit, preserve_turns);
 
 	// Return frame type
 	return type;
@@ -625,7 +639,11 @@ void runner_impl::choose(size_t index)
 	inkAssert(prev != nullptr, "No 'done' point recorded before finishing choice output");
 
 	// Move to the previous pointer so we track our movements correctly
-	jump(prev, false, false);
+	{
+		const bool record_visits    = false;
+		const bool track_knot_visit = false;
+		jump(prev, record_visits, track_knot_visit);
+	}
 	_done = nullptr;
 
 	// Collapse callstacks to the correct thread
@@ -635,7 +653,9 @@ void runner_impl::choose(size_t index)
 	_eval.clear();
 
 	// Jump to destination and clear choice list
-	jump(_story->instructions() + c.path(), true, false);
+	const bool record_visits    = true;
+	const bool track_knot_visit = false;
+	jump(_story->instructions() + c.path(), record_visits, track_knot_visit);
 	clear_choices();
 	_entered_knot = false;
 }
@@ -815,7 +835,9 @@ bool runner_impl::move_to(hash_t path)
 	// Clear state and move to destination
 	reset();
 	_ptr = _story->instructions();
-	jump(destination, false, false);
+	const bool record_visits    = false;
+	const bool track_knot_visit = false;
+	jump(destination, record_visits, track_knot_visit);
 
 	return true;
 }
@@ -833,7 +855,8 @@ bool runner_impl::migrate_to(const loader& loader, hash_t path)
 		ip_t start_of_knot = _story->find_offset_for(_story->container_data(_current_knot_id)._hash);
 		fetch_tags(start_of_knot);
 		assign_tags({tags_level::KNOT});
-		if (start_of_knot != destination) {
+		// If the destination is in the recorded current knot
+		if (start_of_knot < destination) {
 			for (ip_t iter = start_of_knot; iter != destination; iter += 6) {
 				if (read<Command>(iter) == Command::DEFINE_TEMP) {
 					hash_t temp_name = read<hash_t>(iter + 2);
@@ -846,7 +869,9 @@ bool runner_impl::migrate_to(const loader& loader, hash_t path)
 						while (read<Command>(eval_start) != Command::START_EVAL) {
 							eval_start -= 6;
 						}
-						jump(eval_start, false, false);
+						const bool record_visits    = false;
+						const bool track_knot_visit = false;
+						jump(eval_start, record_visits, track_knot_visit);
 						while (_ptr != iter + 6) {
 							step();
 						}
@@ -860,7 +885,10 @@ bool runner_impl::migrate_to(const loader& loader, hash_t path)
 	// without this the visit() call inside jump() would reset them to 0.
 	_container.clear();
 	_ptr = nullptr;
-	jump(destination, false, true, true);
+	const bool record_visits    = false;
+	const bool track_knot_visit = false;
+	const bool preserve_turns   = true;
+	jump(destination, record_visits, track_knot_visit, preserve_turns);
 
 	if (loader.old_ref_table
 	    && ! _globals->lists().migrate_variables(
@@ -1202,7 +1230,9 @@ void runner_impl::step()
 					inkAssert(
 					    _story->instructions() + target < _story->end(), "Diverting past end of story data!"
 					);
-					jump(_story->instructions() + target, true, ! (flag & CommandFlag::DIVERT_HAS_CONDITION));
+					const bool record_visits    = true;
+					const bool track_knot_visit = ! (flag & CommandFlag::DIVERT_HAS_CONDITION);
+					jump(_story->instructions() + target, record_visits, track_knot_visit);
 				} break;
 				case Command::DIVERT_TO_VARIABLE: {
 					// Get variable value
@@ -1224,9 +1254,11 @@ void runner_impl::step()
 					inkAssert(val, "Jump destiniation needs to be defined!");
 
 					// Move to location
+					const bool record_visits    = true;
+					const bool track_knot_visit = ! (flag & CommandFlag::DIVERT_HAS_CONDITION);
 					jump(
-					    _story->instructions() + val->get<value_type::divert>(), true,
-					    ! (flag & CommandFlag::DIVERT_HAS_CONDITION)
+					    _story->instructions() + val->get<value_type::divert>(), record_visits,
+					    track_knot_visit
 					);
 					inkAssert(_ptr < _story->end(), "Diverted past end of story data!");
 				} break;

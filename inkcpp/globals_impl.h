@@ -65,9 +65,7 @@ protected:
 
 public:
 	// Records a visit to a container.
-	// If preserve_turns is true the existing turns-since counter is kept intact
-	// (used during snapshot migration to avoid clobbering the restored value).
-	void visit(uint32_t container_id, bool preserve_turns = false);
+	void visit(uint32_t container_id);
 
 	// Checks the number of visits to a container
 	uint32_t visits(uint32_t container_id) const;
