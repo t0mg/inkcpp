@@ -1,5 +1,5 @@
 /**
- * EENK — command_strings.cpp
+ * eenk — command_strings.cpp
  *
  * Provides the ink::CommandStrings symbol required by inkcpp runtime.
  * This is a copy of the definition from inkcpp_compiler/command.cpp,
