@@ -1483,7 +1483,11 @@ void runner_impl::step()
 				case Command::END_TAG: {
 					read<uint32_t>();
 					auto tag = _output.get_alloc<true>(_globals->strings(), _globals->lists());
-					add_tag(tag, tags_level::UNKNOWN);
+					if (_evaluation_mode) {
+						add_tag(tag, tags_level::UNKNOWN);
+					} else {
+						add_tag(tag, tags_level::LINE);
+					}
 				} break;
 
 				// == Choice commands
