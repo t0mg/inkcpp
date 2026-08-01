@@ -825,6 +825,7 @@ list_table::list list_table::redefine(list lh, list rh)
 list_interface* list_table::handout_list(list l)
 {
 	static_assert(sizeof(list_interface) == sizeof(list_impl));
+	static_assert(alignof(list_interface) == alignof(list_impl));
 	auto& res = _list_handouts.push();
 	new (&res) list_impl(*this, l.lid);
 	return &res;

@@ -134,6 +134,10 @@ public:
 	bool                set(const ink::runtime::value& val);
 	ink::runtime::value to_interface_value(list_table&) const;
 
+#ifdef __GNUCC__
+#	pragma GCC diagnostic push
+#	pragma GCC diagnostic ignored "-Wtautological-compare"
+#endif
 	/// get value of the type (if possible)
 	template<value_type ty>
 	typename ret<ty>::type get() const
@@ -141,12 +145,16 @@ public:
 		static_assert(ty != ty, "No getter for this type defined!");
 	}
 
+#ifdef __GNUCC__
+#	pragma GCC diagnostic pop
+#endif
+
 	/// check if value evaluates to true
 	bool truthy(const list_table& lists) const;
 
 	/// set value of type (if possible)
 	template<value_type ty, typename... Args>
-	constexpr value& set(Args... args)
+	constexpr value& set(Args...)
 	{
 		static_assert(sizeof...(Args) != sizeof...(Args), "No setter for this type defined!");
 		return *this;
@@ -192,30 +200,37 @@ private:
 	}
 
 	/// actual storage
+	struct value_jump {
+		uint32_t jump;
+		uint32_t thread_id;
+	};
+
+	struct value_frame {
+		uint32_t addr;
+		bool     eval; // was eval mode active in frame above
+	};
+
+	struct value_pointer {
+		hash_t name;
+		int    ci;
+	};
+
 	union {
+
 		bool        bool_value;
 		int32_t     int32_value;
 		string_type string_value;
 		uint32_t    uint32_value;
 		float       float_value;
 
-		struct {
-			uint32_t jump;
-			uint32_t thread_id;
-		} jump;
+		value_jump jump;
 
 		list_table::list list_value;
 		list_flag        list_flag_value;
 
-		struct {
-			uint32_t addr;
-			bool     eval; // was eval mode active in frame above
-		} frame_value;
+		value_frame frame_value;
 
-		struct {
-			hash_t name;
-			int    ci;
-		} pointer;
+		value_pointer pointer;
 	};
 
 	static constexpr size_t max_value_size = sizeof_largest_type<

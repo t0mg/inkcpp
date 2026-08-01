@@ -72,9 +72,13 @@ public:
 			    static_cast<int>(type), static_cast<int>(new_val.type)
 			);
 			if constexpr (traits::arity == 2) {
-				// inkAssert(!old_val.has_value() || old_val.value().type == type,
-				// 	"Missmatch type for variable observers old value: expected optional<%i> got
-				// optional<%i>", static_cast<int>(type), static_cast<int>(old_val.value().type));
+				if (old_val.has_value() && old_val.value().type != type) {
+					inkFail(
+					    "Missmatch type for variable observers old value: expected optional<%i> got "
+					    "optional<%i>",
+					    static_cast<int>(type), static_cast<int>(old_val.value().type)
+					);
+				}
 			}
 		};
 		if constexpr (traits::arity > 0) {

@@ -35,6 +35,7 @@ public:
 		if constexpr (dynamic) {
 			if constexpr (simple) {
 				_dynamic_data = reinterpret_cast<T*>(new char[sizeof(T) * initialCapacity]);
+				inkAssert(( ::size_t ) _dynamic_data % alignof(T) == 0);
 			} else {
 				_dynamic_data = new T[initialCapacity];
 			}
@@ -113,6 +114,7 @@ public:
 			inkAssert(_size <= _capacity, "Try to append to a full array!");
 			// TODO(JBenda): Silent fail?
 		}
+		inkAssert(_size < _capacity);
 		return data()[_size++];
 	}
 
@@ -197,8 +199,8 @@ public:
 
 private:
 	T*                     _dynamic_data = nullptr;
-	size_t                 _capacity;
-	size_t                 _size;
+	size_t                 _capacity     = 0;
+	size_t                 _size         = 0;
 	if_t<dynamic, char, T> _static_data[dynamic ? 1 : initialCapacity];
 };
 
@@ -273,13 +275,22 @@ void managed_array<T, dynamic, initialCapacity, simple>::extend(size_t capacity)
 	}
 	T* new_data = nullptr;
 	if constexpr (simple) {
+		// Warning: Allocating typed data in a char* container is potentially unsafe. We need to be sure
+		// the alignment is compatible with the destination type...
 		new_data = reinterpret_cast<T*>(new char[sizeof(T) * new_capacity]);
-	} else {
-		new_data = new T[new_capacity];
-	}
+		inkAssert(( ::size_t ) new_data % alignof(T) == 0);
 
-	for (size_t i = 0; i < _capacity; ++i) {
-		new_data[i] = _dynamic_data[i];
+		// ...and we have to copy the contents byte-by-byte, since client code (_list_handouts)
+		// type-puns between two classes with different vtbls here. Copying these elementwise would
+		// change the stored C++ type.
+		memcpy(new_data, _dynamic_data, sizeof(T) * _capacity);
+	} else {
+		// Allocate and copy typed data normally
+		new_data = new T[new_capacity];
+
+		for (size_t i = 0; i < _capacity; ++i) {
+			new_data[i] = _dynamic_data[i];
+		}
 	}
 
 	if constexpr (simple) {

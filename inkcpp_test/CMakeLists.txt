@@ -15,6 +15,7 @@ add_executable(
 	Globals.cpp
 	Lists.cpp
 	Tags.cpp
+	TagsAndBranching.cpp
 	NewLines.cpp
 	FallbackFunction.cpp
 	LabelCondition.cpp
