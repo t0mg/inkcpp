@@ -144,3 +144,33 @@ SCENARIO("run a story with lists", "[lists][runtime]")
 		}
 	}
 }
+
+SCENARIO("list flag arithmetic and condition checking", "[lists][regression][runtime]")
+{
+	GIVEN("a story with multiple lists exercising flag arithmetic and conditions")
+	{
+		std::unique_ptr<story> ink{story::from_file(INK_TEST_RESOURCE_DIR "ListArithmeticStory.bin")};
+		globals                globals = ink->new_globals();
+		runner                 thread  = ink->new_runner(globals);
+
+		WHEN("the story is stepped through")
+		{
+			std::string line = thread->getline();
+
+			THEN("flag increment on non-first list matches the expected condition")
+			{
+				REQUIRE(line == "far from shore, open sea\n");
+			}
+
+			THEN("choice conditions correctly reflect modified list variable")
+			{
+				REQUIRE(thread->num_choices() == 1);
+				REQUIRE(std::string(thread->get_choice(0)->text()) == "Wait");
+
+				thread->choose(0);
+				std::string rest = thread->getall();
+				REQUIRE(rest == "Done.\n");
+			}
+		}
+	}
+}

@@ -1515,11 +1515,7 @@ void runner_impl::step()
 				case Command::END_TAG: {
 					read<uint32_t>();
 					auto tag = _output.get_alloc<true>(_globals->strings(), _globals->lists());
-					if (_evaluation_mode) {
-						add_tag(tag, tags_level::UNKNOWN);
-					} else {
-						add_tag(tag, tags_level::LINE);
-					}
+					add_tag(tag, tags_level::UNKNOWN);
 				} break;
 
 				// == Choice commands
@@ -1628,12 +1624,9 @@ void runner_impl::step()
 						_is_falling = false;
 
 						frame_type type;
-						if (! _threads.empty()) {
-							on_done(false);
-							break;
-						} else if (_stack.has_frame(&type) && type == frame_type::function) // implicit return
-						                                                                    // is only for
-						                                                                    // functions
+						if (_stack.has_frame(&type) && type == frame_type::function) // implicit return
+						                                                             // is only for
+						                                                             // functions
 						{
 							// push null and return
 							_eval.push(values::null);
@@ -1641,6 +1634,9 @@ void runner_impl::step()
 							// HACK
 							_ptr += sizeof(Command) + sizeof(CommandFlag);
 							execute_return();
+						} else if (! _threads.empty()) {
+							on_done(false);
+							break;
 						} else if (_ptr == _story->end()) { // check needed, because it colud exist an unnamed
 							                                  // toplevel container (empty named container stack
 							                                  // != empty container stack)

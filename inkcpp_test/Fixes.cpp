@@ -376,3 +376,42 @@ SCENARIO("Node text lookup error after loading story", "[regression][runtime][mi
 		}
 	}
 }
+
+SCENARIO("function call inside thread does not prematurely finish thread", "[regression][runtime][threads]")
+{
+	GIVEN("a story with a function call inside a thread before divert")
+	{
+		std::stringstream ss;
+		ss << "{\"inkVersion\":21,\"root\":[[\"ev\",{\"^->\":\"then\"},\"/ev\",\"thread\",{\"->\":"
+		      "\"thread\"},[\"done\",{\"#n\":\"g-0\"}],null],\"done\",{\"then\":[\"^Should see "
+		      "this.\",\"\\n\",\"end\",{\"#f\":3}],\"thread\":[{\"temp=\":\"go\"},\"ev\",{\"f()\":"
+		      "\"func\"},\"pop\",\"/ev\",\"\\n\",{\"->\":\"go\",\"var\":true},null],\"func\":[\"ev\","
+		      "{\"VAR?\":\"someVariable\"},1,\"+\",{\"VAR=\":\"someVariable\",\"re\":true},\"/ev\","
+		      "null],\"global decl\":[\"ev\",0,{\"VAR=\":\"someVariable\"},\"/ev\",\"end\",null]}],"
+		      "\"listDefs\":{}}";
+
+		WHEN("the story is compiled and run")
+		{
+			std::stringstream                  out;
+			ink::compiler::compilation_results res;
+			ink::compiler::run(ss, out, &res);
+			std::string    out_str = out.str();
+			unsigned char* data    = new unsigned char[out_str.size()];
+			for (size_t i = 0; i < out_str.size(); ++i) {
+				data[i] = out_str[i];
+			}
+			std::unique_ptr<story> ink{story::from_binary(data, static_cast<ink::size_t>(out_str.size()))};
+			globals                globStore = ink->new_globals();
+			runner                 main      = ink->new_runner(globStore);
+			std::string            story     = main->getall();
+
+			THEN("the thread completes the divert and displays the expected text")
+			{
+				REQUIRE(res.warnings.size() == 0);
+				REQUIRE(res.errors.size() == 0);
+				REQUIRE(story == "Should see this.\n");
+			}
+		}
+	}
+}
+
