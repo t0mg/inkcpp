@@ -600,6 +600,10 @@ void runner_impl::advance_line()
 		}
 	}
 
+	if (num_tags<tags_level::UNKNOWN>() > 0) {
+		assign_tags({tags_level::LINE});
+	}
+
 	// can be in save state becaues of choice
 	// Garbage collection TODO: How often do we want to do this?
 	if (_saved) {
