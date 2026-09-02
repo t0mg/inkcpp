@@ -285,17 +285,20 @@ const unsigned char* globals_impl::snap_load(const unsigned char* ptr, const loa
 	);
 	for (size_t i = 0; i < old_capacity; ++i) {
 		hash_t path;
-		ptr                      = snap_read(ptr, path);
-		container_t c_id         = ~0U;
-		ip_t        container_ip = _owner->find_offset_for(path);
-		bool        found        = container_ip != nullptr
-		          && _owner->find_container_id(
-		              static_cast<uint32_t>(container_ip - _owner->instructions()), c_id
-		          );
+		ptr = snap_read(ptr, path);
 		if (! loader.migratable) {
-			inkAssert(found, "Invalid container id reference.");
-			inkAssert(c_id == i, "tracked containere are not allowed to move, expect we migrate");
+			inkAssert(i < _owner->num_containers(), "Container index exceeds story containers");
+			inkAssert(
+			    path == _owner->container_data(static_cast<container_t>(i))._hash,
+			    "Container hash mismatch in snapshot"
+			);
 		} else {
+			container_t c_id         = ~0U;
+			ip_t        container_ip = path != 0 ? _owner->find_offset_for(path) : nullptr;
+			bool        found        = container_ip != nullptr
+			                        && _owner->find_container_id(
+			                     static_cast<uint32_t>(container_ip - _owner->instructions()), c_id
+			                 );
 			if (found) {
 				_visit_counts.set(c_id, _visit_counts.get_old(i));
 			}
