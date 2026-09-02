@@ -6,6 +6,28 @@
  */
 #include "system.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#include <cstdio>
+
+namespace {
+LONG WINAPI GlobalCrashHandler(EXCEPTION_POINTERS* pException)
+{
+	fprintf(stderr, "\n=== SYSTEM CRASH DETECTED! ExceptionCode = 0x%08X at Address = %p ===\n",
+	        (unsigned)pException->ExceptionRecord->ExceptionCode,
+	        pException->ExceptionRecord->ExceptionAddress);
+	fflush(stderr);
+	return EXCEPTION_EXECUTE_HANDLER;
+}
+
+struct GlobalInitCrashHandler {
+	GlobalInitCrashHandler() {
+		SetUnhandledExceptionFilter(GlobalCrashHandler);
+	}
+} g_globalCrashHandler;
+}
+#endif
+
 #ifndef INK_ENABLE_UNREAL
 
 namespace ink

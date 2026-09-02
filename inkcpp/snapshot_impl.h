@@ -124,11 +124,11 @@ private:
 	static size_t                               file_size(size_t, size_t, bool);
 
 	struct header {
-		size_t num_runners;
-		size_t length;
+		uint32_t num_runners;
+		uint32_t length;
 		hash_t hash;
 		bool   migratable;
-		size_t version = 1;
+		uint32_t version = 1;
 	} _header;
 
 	size_t get_offset(size_t idx) const
@@ -137,7 +137,7 @@ private:
 		    idx <= _header.num_runners + (can_be_migrated() ? 1 : 0),
 		    "Out of Bound access for runner in snapshot."
 		);
-		return reinterpret_cast<const size_t*>(_file + sizeof(header))[idx];
+		return reinterpret_cast<const uint32_t*>(_file + sizeof(header))[idx];
 	}
 };
 } // namespace ink::runtime::internal

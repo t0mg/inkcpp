@@ -17,6 +17,8 @@
 
 #include <limits>
 #include <cctype>
+#include <cstdio>
+#include <cstdlib>
 
 #ifdef INK_ENABLE_STL
 #	ifdef INK_ENABLE_EXCEPTIONS
@@ -32,6 +34,10 @@
 #	include <cstdlib>
 #	include <ctype.h>
 #	include <cassert>
+#endif
+
+#if defined(PLATFORM_ESP32) || defined(ESP32) || defined(ARDUINO_ARCH_ESP32)
+extern "C" int esp_rom_printf(const char *fmt, ...);
 #endif
 
 // Platform specific defines //
@@ -248,6 +254,7 @@ private:
 // dependend on rtti, exception and stl support not all arguments are needed
 #	pragma warning(disable : 4100)
 #endif
+
 /** Assert helper, not to be used directly, please use @ref inkAssert and @ref inkFail to be
  * enviroment agnostic. */
 template<typename... Args>
@@ -258,6 +265,12 @@ void ink_assert(bool condition, const char* msg = nullptr, Args... args)
 		msg = EMPTY;
 	}
 	if (! condition) {
+#if defined(PLATFORM_ESP32) || defined(ESP32) || defined(ARDUINO_ARCH_ESP32)
+		esp_rom_printf("\n\n>>> INK_ASSERT FAILED: %s <<<\n\n", msg);
+#else
+		printf("\n\n>>> INK_ASSERT FAILED: %s <<<\n\n", msg);
+		fflush(stdout);
+#endif
 #if defined(INK_ENABLE_STL) || defined(INK_ENABLE_CSTD)
 		if constexpr (sizeof...(args) > 0) {
 			size_t size    = snprintf(nullptr, 0, msg, args...) + 1;
@@ -268,13 +281,14 @@ void ink_assert(bool condition, const char* msg = nullptr, Args... args)
 #endif
 #ifdef INK_ENABLE_EXCEPTIONS
 		throw ink_exception(msg);
-#elif defined(INK_ENABLE_CSTD)
-		fprintf(stderr, "Ink Assert: %s\n", msg);
-		abort();
-#elif defined(INK_ENABLE_UNREAL)
-		// TODO: implement UE exception handling
 #else
-#	warning no assertion handling this could lead to invalid code paths
+#if defined(PLATFORM_ESP32) || defined(ESP32) || defined(ARDUINO_ARCH_ESP32)
+		esp_rom_printf("Ink Assert: %s\n", msg);
+#else
+		fprintf(stderr, "Ink Assert: %s\n", msg);
+		fflush(stderr);
+#endif
+		exit(1);
 #endif
 	}
 }
@@ -290,9 +304,7 @@ template<typename... Args>
 [[noreturn]] inline void ink_assert(const char* msg = nullptr, Args... args)
 {
 	ink_assert(false, msg, args...);
-#ifdef INK_ENABLE_CSTD
-	exit(EXIT_FAILURE);
-#endif
+	exit(1);
 }
 
 namespace runtime::internal
@@ -404,6 +416,14 @@ public:
 		new (&_value) T(args...);
 		_has_value = true;
 		return _value;
+	}
+
+	void reset()
+	{
+		if (_has_value) {
+			_value.~T();
+			_has_value = false;
+		}
 	}
 
 private:

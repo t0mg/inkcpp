@@ -211,7 +211,7 @@ int main(int argc, const char** argv)
 
 		while (true) {
 			while (thread->can_continue()) {
-				std::cout << thread->getline();
+				std::cout << thread->getline() << std::flush;
 				if (thread->has_tags()) {
 					std::cout << "# tags: ";
 					for (ink::size_t i = 0; i < thread->num_tags(); ++i) {
@@ -245,8 +245,11 @@ int main(int argc, const char** argv)
 				}
 
 				int c = 0;
-				std::cout << "?> ";
-				std::cin >> c;
+				std::cout << "?> " << std::flush;
+				if (! (std::cin >> c)) {
+					std::cout << "[EOF reached, exiting]" << std::endl;
+					break;
+				}
 				if (c == -1) {
 					std::cout << "To create a migratable snapshot please enter a choice in addition, or `-1` "
 					             "to snap right now:\nsnap after\n?>";
@@ -272,7 +275,13 @@ int main(int argc, const char** argv)
 			break;
 		}
 	} catch (const std::exception& e) {
+		printf("\n\n>>> UNHANDLED INK RUNTIME EXCEPTION: %s <<<\n\n", e.what());
+		fflush(stdout);
 		std::cerr << "Unhandled ink runtime exception: " << e.what() << std::endl;
+		return 1;
+	} catch (...) {
+		printf("\n\n>>> UNHANDLED UNKNOWN EXCEPTION <<<\n\n");
+		fflush(stdout);
 		return 1;
 	}
 	return 0;

@@ -31,6 +31,11 @@ namespace runtime
 			thread
 		};
 
+		inline bool is_entry_null(const entry& e)
+		{
+			return e.name == ~0U || (e.name == InvalidHash && e.data.type() == value_type::none);
+		}
+
 		class basic_stack : protected restorable<entry>
 		{
 			friend list_table;

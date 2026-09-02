@@ -376,7 +376,7 @@ char* basic_stream::get_alloc(string_table& strings, list_table& lists)
 				break;
 			case value_type::list: ptr = lists.toString(ptr, _data[i].get<value_type::list>()); break;
 			case value_type::list_flag:
-				ptr = lists.toString(ptr, _data[i].get<value_type::list>());
+				ptr = lists.toString(ptr, _data[i].get<value_type::list_flag>());
 				break;
 			default: inkFail("cant convert expression to string!");
 		}

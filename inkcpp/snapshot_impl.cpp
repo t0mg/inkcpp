@@ -66,7 +66,7 @@ size_t
     snapshot_impl::file_size(size_t serialization_length, size_t runner_cnt, bool list_definition)
 {
 	return serialization_length + sizeof(header)
-	     + (runner_cnt + 1 + (list_definition ? 1 : 0)) * sizeof(size_t);
+	     + (runner_cnt + 1 + (list_definition ? 1 : 0)) * sizeof(uint32_t);
 }
 
 bool snapshot_impl::can_be_migrated(const story& story) const
@@ -96,8 +96,8 @@ snapshot_impl::snapshot_impl(const globals_impl& globals)
 	}
 
 	_length             = file_size(_length, runner_cnt, migratable);
-	_header.length      = _length;
-	_header.num_runners = runner_cnt;
+	_header.length      = static_cast<uint32_t>(_length);
+	_header.num_runners = static_cast<uint32_t>(runner_cnt);
 	_header.hash        = globals._owner->hash();
 	_header.migratable  = migratable;
 	unsigned char* data = new unsigned char[_length];
@@ -108,21 +108,21 @@ snapshot_impl::snapshot_impl(const globals_impl& globals)
 	// write lookup table
 	ptr += sizeof(header);
 	{
-		size_t offset = static_cast<size_t>(
-		    (ptr - data) + (_header.num_runners + 1 + migratable) * sizeof(size_t)
+		uint32_t offset = static_cast<uint32_t>(
+		    (ptr - data) + (_header.num_runners + 1 + migratable) * sizeof(uint32_t)
 		);
 		memcpy(ptr, &offset, sizeof(offset));
 		ptr += sizeof(offset);
-		offset += globals.snap(nullptr, snapper);
+		offset += static_cast<uint32_t>(globals.snap(nullptr, snapper));
 		for (auto node = globals._runners_start; node; node = node->next) {
 			memcpy(ptr, &offset, sizeof(offset));
 			ptr += sizeof(offset);
-			offset += node->object->snap(nullptr, snapper);
+			offset += static_cast<uint32_t>(node->object->snap(nullptr, snapper));
 		}
 		if (migratable) {
 			memcpy(ptr, &offset, sizeof(offset));
 			ptr += sizeof(offset);
-			offset += globals._owner->list_meta_size();
+			offset += static_cast<uint32_t>(globals._owner->list_meta_size());
 		}
 	}
 
