@@ -397,4 +397,36 @@ SCENARIO("function call inside thread does not prematurely finish thread", "[reg
 	}
 }
 
+SCENARIO(
+    "snapshot with fallback choice survives garbage collection", "[regression][runtime][snapshot]"
+)
+{
+	GIVEN("a story with choices and an invisible fallback choice")
+	{
+		std::unique_ptr<story> ink{
+		    story::from_file(INK_TEST_RESOURCE_DIR "FallbackChoiceSnapshot.bin")
+		};
+		globals globStore = ink->new_globals();
+		runner  main      = ink->new_runner(globStore);
 
+		WHEN("the runner reaches the choice point and snapshot is created")
+		{
+			main->getall();
+			REQUIRE(main->has_choices());
+			REQUIRE(main->num_choices() == 2);
+
+			THEN("snapshot succeeds and can be restored")
+			{
+				std::unique_ptr<snapshot> snap{main->create_snapshot()};
+				REQUIRE(snap != nullptr);
+				REQUIRE(snap->get_data_len() > 0);
+
+				runner restored = ink->new_runner_from_snapshot(*snap);
+				REQUIRE(restored->has_choices());
+				REQUIRE(restored->num_choices() == 2);
+				CHECK(restored->get_choice(0)->text() == std::string("choice 1"));
+				CHECK(restored->get_choice(1)->text() == std::string("choice 2"));
+			}
+		}
+	}
+}
