@@ -1779,6 +1779,9 @@ void runner_impl::mark_used(string_table& strings, list_table& lists) const
 	for (size_t i = 0; i < _choices.size(); i++) {
 		strings.mark_used(_choices[i]._text);
 	}
+	if (_fallback_choice) {
+		strings.mark_used(_fallback_choice.value()._text);
+	}
 }
 
 void runner_impl::save()
