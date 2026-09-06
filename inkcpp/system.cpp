@@ -32,6 +32,10 @@ struct GlobalInitCrashHandler {
 
 namespace ink
 {
+jmp_buf g_ink_jmp_buf;
+bool g_ink_has_jmp_buf = false;
+char g_ink_last_error[256] = {0};
+
 #	define A      54059 /* a prime */
 #	define B      76963 /* another prime */
 #	define C      86969 /* yet another prime */

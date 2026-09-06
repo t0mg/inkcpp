@@ -19,6 +19,7 @@
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
+#include <csetjmp>
 
 #ifdef INK_ENABLE_STL
 #	ifdef INK_ENABLE_EXCEPTIONS
@@ -39,6 +40,12 @@
 #if defined(PLATFORM_ESP32) || defined(ESP32) || defined(ARDUINO_ARCH_ESP32)
 extern "C" int esp_rom_printf(const char *fmt, ...);
 #endif
+
+namespace ink {
+extern jmp_buf g_ink_jmp_buf;
+extern bool g_ink_has_jmp_buf;
+extern char g_ink_last_error[256];
+}
 
 // Platform specific defines //
 
@@ -279,6 +286,14 @@ void ink_assert(bool condition, const char* msg = nullptr, Args... args)
 			msg = message;
 		}
 #endif
+		if (msg) {
+			snprintf(g_ink_last_error, sizeof(g_ink_last_error), "%s", msg);
+		} else {
+			g_ink_last_error[0] = '\0';
+		}
+		if (g_ink_has_jmp_buf) {
+			longjmp(g_ink_jmp_buf, 1);
+		}
 #ifdef INK_ENABLE_EXCEPTIONS
 		throw ink_exception(msg);
 #else
