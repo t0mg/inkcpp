@@ -8,8 +8,10 @@
 
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
-#include <AssetToolsModule.h>
+#include "AssetToolsModule.h"
+#include "Misc/EngineVersionComparison.h"
 #include "EditorFramework/AssetImportData.h"
+
 #include "InkAsset.h"
 
 #define LOCTEXT_NAMESPACE "AssetTypeActions"
@@ -40,7 +42,9 @@ public:
 		}
 	}
 
+#if ! UE_VERSION_OLDER_THAN(5, 6, 0)
 	bool ShouldFindEditorForAsset() const override { return false; }
+#endif
 
 	// Inherited via IAssetTypeActions
 	void OpenAssetEditor(

@@ -336,30 +336,25 @@ public:
 		if (flag.list_id < 0 || flag.flag < 0) {
 			stack.push(value{}.set<value_type::int32>(0));
 		} else {
-			stack.push(value{}.set<value_type::int32>(
-			    _list_table.get_flag_value(flag)
-			));
+			stack.push(value{}.set<value_type::int32>(_list_table.get_flag_value(flag)));
 		}
 	}
 };
 
 template<>
-class operation<Command::LIST_VALUE, value_type::list, void>
-    : public operation_base<list_table>
+class operation<Command::LIST_VALUE, value_type::list, void> : public operation_base<list_table>
 {
 public:
 	using operation_base::operation_base;
 
 	void operator()(basic_eval_stack& stack, value* vals)
 	{
-		list_table::list l = vals[0].get<value_type::list>();
-		list_flag max_flag = _list_table.max(l);
+		list_table::list l        = vals[0].get<value_type::list>();
+		list_flag        max_flag = _list_table.max(l);
 		if (max_flag.list_id < 0 || max_flag.flag < 0) {
 			stack.push(value{}.set<value_type::int32>(0));
 		} else {
-			stack.push(value{}.set<value_type::int32>(
-			    _list_table.get_flag_value(max_flag)
-			));
+			stack.push(value{}.set<value_type::int32>(_list_table.get_flag_value(max_flag)));
 		}
 	}
 };

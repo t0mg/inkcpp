@@ -183,10 +183,7 @@ void basic_stack::push_frame<frame_type::thread>(offset_t return_to, bool eval)
 	add(InvalidHash, value{}.set<value_type::thread_frame>(return_to, eval));
 }
 
-const entry* basic_stack::pop()
-{
-	return &base::pop(is_entry_null);
-}
+const entry* basic_stack::pop() { return &base::pop(is_entry_null); }
 
 entry* basic_stack::do_thread_jump_pop(const basic_stack::iterator& jumpStart)
 {
@@ -278,11 +275,9 @@ offset_t basic_stack::pop_frame(frame_type* type, bool& eval)
 
 		// We now have a frame marker. Check if it's a thread
 		// Thread handling
-		if (
-		    frame->data.type() == value_type::thread_start
+		if (frame->data.type() == value_type::thread_start
 		    || frame->data.type() == value_type::thread_end
-		    || frame->data.type() == value_type::jump_marker
-		) {
+		    || frame->data.type() == value_type::jump_marker) {
 			// End of thread marker, we need to create a jump marker
 			if (frame->data.type() == value_type::thread_end) {
 				// Push a new jump marker after the thread end

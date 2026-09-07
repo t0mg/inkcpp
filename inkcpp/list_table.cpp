@@ -486,7 +486,8 @@ list_table::list list_table::add(list arg, int n)
 
 list_flag list_table::add(list_flag arg, int n)
 {
-	if (arg == null_flag || arg == empty_flag || arg.flag == -1 || arg.list_id < 0 || static_cast<size_t>(arg.list_id) >= _list_end.size()) {
+	if (arg == null_flag || arg == empty_flag || arg.flag == -1 || arg.list_id < 0
+	    || static_cast<size_t>(arg.list_id) >= _list_end.size()) {
 		return arg;
 	}
 	int fid = toFid(arg);
@@ -575,14 +576,16 @@ int32_t list_table::count(list l) const
 list_flag list_table::min(list l) const
 {
 	list_flag     res{-1, -1};
-	int           min_val = -1;
-	const data_t* data = getPtr(l.lid);
+	int           min_val = 0;
+	bool          found   = false;
+	const data_t* data    = getPtr(l.lid);
 	for (size_t i = 0; i < numLists(); ++i) {
 		if (hasList(data, i)) {
 			for (size_t j = listBegin(i); j < _list_end[i]; ++j) {
 				if (hasFlag(data, j)) {
 					int value = _flag_values[j];
-					if (min_val < 0 || value < min_val) {
+					if (! found || value < min_val) {
+						found       = true;
 						min_val     = value;
 						res.flag    = static_cast<int16_t>(j - listBegin(i));
 						res.list_id = static_cast<int16_t>(i);
@@ -598,14 +601,16 @@ list_flag list_table::min(list l) const
 list_flag list_table::max(list l) const
 {
 	list_flag     res{-1, -1};
-	int           max_val = -1;
-	const data_t* data = getPtr(l.lid);
+	int           max_val = 0;
+	bool          found   = false;
+	const data_t* data    = getPtr(l.lid);
 	for (size_t i = 0; i < numLists(); ++i) {
 		if (hasList(data, i)) {
 			for (size_t j = _list_end[i] - 1; j != ~0U && j >= listBegin(i); --j) {
 				if (hasFlag(data, j)) {
 					int value = _flag_values[j];
-					if (max_val < 0 || value > max_val) {
+					if (! found || value > max_val) {
+						found       = true;
 						max_val     = value;
 						res.flag    = static_cast<int16_t>(j - listBegin(i));
 						res.list_id = static_cast<int16_t>(i);
@@ -678,7 +683,8 @@ list_table::list list_table::all(list arg)
 list_table::list list_table::all(list_flag arg)
 {
 	list res = create();
-	if (arg != null_flag && arg != empty_flag && arg.list_id >= 0 && static_cast<size_t>(arg.list_id) < _list_end.size()) {
+	if (arg != null_flag && arg != empty_flag && arg.list_id >= 0
+	    && static_cast<size_t>(arg.list_id) < _list_end.size()) {
 		data_t* o = getPtr(res.lid);
 		setList(o, arg.list_id);
 		for (size_t i = listBegin(arg.list_id); i < _list_end[arg.list_id]; ++i) {
@@ -715,7 +721,8 @@ list_table::list list_table::invert(list arg)
 list_table::list list_table::invert(list_flag arg)
 {
 	list res = create();
-	if (arg != null_flag && arg != empty_flag && arg.list_id >= 0 && static_cast<size_t>(arg.list_id) < _list_end.size()) {
+	if (arg != null_flag && arg != empty_flag && arg.list_id >= 0
+	    && static_cast<size_t>(arg.list_id) < _list_end.size()) {
 		data_t* o = getPtr(res.lid);
 		setList(o, arg.list_id);
 		for (size_t i = listBegin(arg.list_id); i < _list_end[arg.list_id]; ++i) {
@@ -812,7 +819,7 @@ optional<list_flag> list_table::toFlag(const char* flag_name) const
 		if (list.list_id < 0 || static_cast<size_t>(list.list_id) >= _list_end.size()) {
 			return nullopt;
 		}
-		flag_name      = periode + 1;
+		flag_name         = periode + 1;
 		size_t list_begin = listBegin(static_cast<size_t>(list.list_id));
 		for (size_t i = list_begin; i != _list_end[list.list_id]; ++i) {
 			if (str_equal(flag_name, _flag_names[i])) {

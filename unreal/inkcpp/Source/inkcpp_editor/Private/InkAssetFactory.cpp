@@ -9,6 +9,7 @@
 #include "EditorFramework/AssetImportData.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "Misc/EngineVersionComparison.h"
 #include "Internationalization/Regex.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Widgets/SBoxPanel.h"
@@ -243,8 +244,10 @@ UInkAssetFactory::UInkAssetFactory(const FObjectInitializer& ObjectInitializer)
 	SupportedClass     = UInkAsset::StaticClass();
 	bCreateNew         = false;
 	bAutomatedReimport = true;
-	bForceShowDialog   = true;
 	bEditorImport      = true;
+#if ! UE_VERSION_OLDER_THAN(5, 5, 0)
+	bForceShowDialog = true;
+#endif
 
 	ImportPriority = 20;
 }
@@ -309,7 +312,12 @@ UObject* UInkAssetFactory::FactoryCreateFile(
 			// Build the inklecate invocation
 			use_temp_file = true;
 			char tmp_filename[L_tmpnam];
-			if (tmpnam(tmp_filename) == 0) {
+#ifdef _MSC_VER
+			if (! tmpnam_s(tmp_filename, L_tmpnam))
+#else
+			if (tmpnam(tmp_filename) == nullptr)
+#endif
+			{
 				UE_LOG(InkCpp, Error, TEXT("InkCPP: Failed to create a temporary file name."));
 				return nullptr;
 			}

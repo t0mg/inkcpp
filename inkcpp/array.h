@@ -36,7 +36,8 @@ public:
 		if constexpr (dynamic) {
 			if constexpr (initialCapacity > 0) {
 				if constexpr (simple) {
-					_dynamic_data = reinterpret_cast<T*>(new (std::nothrow) char[sizeof(T) * initialCapacity]);
+					_dynamic_data
+					    = reinterpret_cast<T*>(new (std::nothrow) char[sizeof(T) * initialCapacity]);
 					inkAssert(_dynamic_data != nullptr, "Out of memory in inkcpp: managed_array init failed");
 					inkAssert(( ::size_t ) _dynamic_data % alignof(T) == 0);
 				} else {

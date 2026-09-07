@@ -59,7 +59,21 @@ namespace runtime
 			value*       get(hash_t name);
 			value*       get_from_frame(int ci, hash_t name);
 
-			void print_dump() {
+#ifdef INK_ENABLE_STL
+			void print_dump(std::ostream& out) const
+			{
+				out << "DUMPING STACK:\n";
+				int  idx = 0;
+				auto it  = this->begin();
+				while (! it.done()) {
+					out << " [" << idx++ << "] hash " << it.get()->name << " type "
+					    << static_cast<unsigned int>(it.get()->data.type()) << "\n";
+					it.next();
+				}
+			}
+#endif
+			void print_dump() const
+			{
 				printf("DUMPING STACK:\n");
 				int idx = 0;
 				auto it = this->begin();
