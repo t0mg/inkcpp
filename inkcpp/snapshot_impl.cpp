@@ -22,6 +22,22 @@ snapshot* snapshot::from_binary(const unsigned char* data, size_t length, bool f
 	return new internal::snapshot_impl(data, length, freeOnDestroy);
 }
 
+size_t snapshot::compute_size(const runner_interface* r)
+{
+	if (!r) {
+		return 0;
+	}
+	return r->compute_snapshot_size();
+}
+
+size_t snapshot::stream_to(const runner_interface* r, writer& w)
+{
+	if (!r) {
+		return 0;
+	}
+	return r->stream_snapshot_to(w);
+}
+
 #ifdef INK_ENABLE_STL
 snapshot* snapshot::from_file(const char* filename)
 {
@@ -96,10 +112,12 @@ snapshot_impl::snapshot_impl(const globals_impl& globals)
 	}
 
 	_length             = file_size(_length, runner_cnt, migratable);
+	memset(&_header, 0, sizeof(_header));
 	_header.length      = static_cast<uint32_t>(_length);
 	_header.num_runners = static_cast<uint32_t>(runner_cnt);
 	_header.hash        = globals._owner->hash();
 	_header.migratable  = migratable;
+	_header.version     = 1;
 	unsigned char* data = new unsigned char[_length];
 	_file               = data;
 	unsigned char* ptr  = data;

@@ -57,6 +57,8 @@ public:
 	}
 
 	snapshot* create_snapshot() const override;
+	size_t    stream_snapshot_to(snapshot::writer& w) const override;
+	size_t    compute_snapshot_size() const override;
 
 protected:
 	optional<ink::runtime::value> get_var(hash_t name) const override;

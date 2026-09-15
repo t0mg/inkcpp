@@ -55,10 +55,35 @@ namespace ink::runtime
  * @todo Currently the id is equal to the creation order, a way to name the single runner/threads is
  * WIP
  */
+class runner_interface;
+
 class snapshot
 {
 public:
 	virtual ~snapshot(){};
+
+	/** Abstract writer interface for streaming snapshot data. */
+	class writer
+	{
+	public:
+		virtual ~writer() {}
+		/** Write bytes to the output. Returns true on success. */
+		virtual bool write(const void* data, size_t len) = 0;
+	};
+
+	/** Compute snapshot size without allocating memory.
+	 *  @param r Runner (snapshots globals + all associated runners)
+	 *  @return Total snapshot size in bytes, or 0 on error.
+	 */
+	static size_t compute_size(const runner_interface* r);
+
+	/** Stream snapshot directly to a writer, section by section.
+	 *  Peak heap usage = max(globals_section_size, largest_runner_section_size).
+	 *  @param r Runner (snapshots globals + all associated runners)
+	 *  @param w Writer to receive the snapshot data
+	 *  @return Total bytes written, or 0 on failure.
+	 */
+	static size_t stream_to(const runner_interface* r, writer& w);
 
 	/** Construct snapshot from blob.
 	 * Memory must be kept valid until the snapshot is deconstructed.

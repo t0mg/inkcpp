@@ -9,10 +9,10 @@
 #include "config.h"
 #include "types.h"
 #include "functional.h"
+#include "snapshot.h"
 
 namespace ink::runtime
 {
-class snapshot;
 
 /**
  * Represents a global store to be shared amongst ink runners.
@@ -73,6 +73,16 @@ public:
 	 * (inclusive all runners assoziated with this globals)
 	 */
 	virtual snapshot* create_snapshot() const = 0;
+
+	/** Stream snapshot to writer without monolithic heap allocation.
+	 *  @return Total bytes written, or 0 on failure.
+	 */
+	virtual size_t stream_snapshot_to(snapshot::writer& w) const = 0;
+
+	/** Compute snapshot size without allocating.
+	 *  @return Total snapshot size in bytes.
+	 */
+	virtual size_t compute_snapshot_size() const = 0;
 
 	virtual ~globals_interface() = default;
 

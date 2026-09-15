@@ -10,6 +10,7 @@
 #include "system.h"
 #include "functional.h"
 #include "types.h"
+#include "snapshot.h"
 
 #ifdef INK_ENABLE_UNREAL
 #	include "Containers/UnrealString.h"
@@ -95,6 +96,16 @@ public:
 	 * @sa story::new_runner_from_snapshot, story::new_globals_from_snapshot
 	 */
 	virtual snapshot* create_snapshot() const = 0;
+
+	/** Stream snapshot to writer without monolithic heap allocation.
+	 *  @return Total bytes written, or 0 on failure.
+	 */
+	virtual size_t stream_snapshot_to(snapshot::writer& w) const = 0;
+
+	/** Compute snapshot size without allocating.
+	 *  @return Total snapshot size in bytes.
+	 */
+	virtual size_t compute_snapshot_size() const = 0;
 
 	/**
 	 * Continue execution until the next newline, then allocate a c-style

@@ -677,6 +677,16 @@ void runner_impl::getline_silent()
 
 snapshot* runner_impl::create_snapshot() const { return _globals->create_snapshot(); }
 
+size_t runner_impl::stream_snapshot_to(snapshot::writer& w) const
+{
+	return _globals->stream_snapshot_to(w);
+}
+
+size_t runner_impl::compute_snapshot_size() const
+{
+	return _globals->compute_snapshot_size();
+}
+
 bool runner_impl::can_be_migrated() const
 {
 	if (_choices.size()) {

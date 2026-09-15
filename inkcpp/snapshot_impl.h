@@ -111,6 +111,16 @@ public:
 
 	mutable const list_table* old_ref_table = nullptr;
 
+	static size_t                               file_size(size_t, size_t, bool);
+
+	struct header {
+		uint32_t num_runners;
+		uint32_t length;
+		hash_t hash;
+		bool   migratable;
+		uint32_t version = 1;
+	} _header;
+
 private:
 	// file information
 	// only populated when loading snapshots
@@ -121,15 +131,6 @@ private:
 	const unsigned char*                        _file;
 	size_t                                      _length;
 	bool                                        _managed;
-	static size_t                               file_size(size_t, size_t, bool);
-
-	struct header {
-		uint32_t num_runners;
-		uint32_t length;
-		hash_t hash;
-		bool   migratable;
-		uint32_t version = 1;
-	} _header;
 
 	size_t get_offset(size_t idx) const
 	{

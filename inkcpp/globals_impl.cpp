@@ -11,6 +11,7 @@
 #include "system.h"
 #include "types.h"
 #include "value.h"
+#include <new>
 
 namespace ink::runtime::internal
 {
@@ -235,6 +236,134 @@ void globals_impl::forget()
 }
 
 snapshot* globals_impl::create_snapshot() const { return new snapshot_impl(*this); }
+
+size_t globals_impl::compute_snapshot_size() const
+{
+	snapshot_interface::snapper snapper(strings(), _owner->string(0));
+	bool                        migratable = can_be_migrated();
+	size_t                      runner_cnt = 0;
+
+	size_t length = snap(nullptr, snapper);
+	for (auto node = _runners_start; node; node = node->next) {
+		length += node->object->snap(nullptr, snapper);
+		migratable = migratable && node->object->can_be_migrated();
+		++runner_cnt;
+	}
+	if (migratable) {
+		length += _owner->list_meta_size();
+	}
+
+	return snapshot_impl::file_size(length, runner_cnt, migratable);
+}
+
+size_t globals_impl::stream_snapshot_to(snapshot::writer& w) const
+{
+	snapshot_interface::snapper snapper(strings(), _owner->string(0));
+	bool                        migratable = can_be_migrated();
+
+	// Pass 1: dry run to calculate sizes
+	size_t globals_size = snap(nullptr, snapper);
+
+	// Collect runner sizes (stories in inkcpp generally have 1 runner, max a few)
+	static constexpr size_t MAX_RUNNERS = 16;
+	size_t runner_sizes[MAX_RUNNERS];
+	size_t runner_cnt = 0;
+	for (auto node = _runners_start; node; node = node->next) {
+		if (runner_cnt >= MAX_RUNNERS) {
+			return 0;
+		}
+		runner_sizes[runner_cnt] = node->object->snap(nullptr, snapper);
+		migratable = migratable && node->object->can_be_migrated();
+		++runner_cnt;
+	}
+
+	size_t list_meta_sz = migratable ? _owner->list_meta_size() : 0;
+
+	// Total length calculation
+	size_t payload_len = globals_size;
+	for (size_t i = 0; i < runner_cnt; ++i) {
+		payload_len += runner_sizes[i];
+	}
+	payload_len += list_meta_sz;
+
+	size_t total_length = snapshot_impl::file_size(payload_len, runner_cnt, migratable);
+
+	// Write Header
+	snapshot_impl::header hdr;
+	memset(&hdr, 0, sizeof(hdr));
+	hdr.num_runners = static_cast<uint32_t>(runner_cnt);
+	hdr.length      = static_cast<uint32_t>(total_length);
+	hdr.hash        = _owner->hash();
+	hdr.migratable  = migratable;
+	hdr.version     = 1;
+
+	if (!w.write(&hdr, sizeof(hdr))) {
+		return 0;
+	}
+
+	// Write Lookup Table
+	size_t num_offsets = runner_cnt + 1 + (migratable ? 1 : 0);
+	uint32_t offsets[MAX_RUNNERS + 2];
+	uint32_t off = static_cast<uint32_t>(sizeof(hdr) + num_offsets * sizeof(uint32_t));
+	offsets[0] = off;
+	off += static_cast<uint32_t>(globals_size);
+	for (size_t i = 0; i < runner_cnt; ++i) {
+		offsets[1 + i] = off;
+		off += static_cast<uint32_t>(runner_sizes[i]);
+	}
+	if (migratable) {
+		offsets[1 + runner_cnt] = off;
+	}
+
+	if (!w.write(offsets, num_offsets * sizeof(uint32_t))) {
+		return 0;
+	}
+
+	// Stream Globals payload
+	if (globals_size > 0) {
+		unsigned char* buf = new (std::nothrow) unsigned char[globals_size];
+		if (!buf) {
+			printf("[inkcpp] stream_snapshot_to: FAILED to alloc globals buf (%u bytes)\n",
+				(unsigned)globals_size);
+			return 0;
+		}
+		snap(buf, snapper);
+		bool ok = w.write(buf, globals_size);
+		delete[] buf;
+		if (!ok) {
+			return 0;
+		}
+	}
+
+	// Stream Runner payloads
+	size_t ri = 0;
+	for (auto node = _runners_start; node; node = node->next, ++ri) {
+		size_t rsz = runner_sizes[ri];
+		if (rsz > 0) {
+			unsigned char* buf = new (std::nothrow) unsigned char[rsz];
+			if (!buf) {
+				printf("[inkcpp] stream_snapshot_to: FAILED to alloc runner buf (%u bytes)\n",
+					(unsigned)rsz);
+				return 0;
+			}
+			node->object->snap(buf, snapper);
+			bool ok = w.write(buf, rsz);
+			delete[] buf;
+			if (!ok) {
+				return 0;
+			}
+		}
+	}
+
+	// Stream List Metadata (already resident in memory)
+	if (migratable && list_meta_sz > 0) {
+		if (!w.write(_owner->list_meta(), list_meta_sz)) {
+			return 0;
+		}
+	}
+
+	return total_length;
+}
 
 bool globals_impl::can_be_migrated() const
 {

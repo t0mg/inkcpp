@@ -120,6 +120,8 @@ public:
 	virtual hash_t get_current_knot() const override;
 
 	snapshot* create_snapshot() const override;
+	size_t    stream_snapshot_to(snapshot::writer& w) const override;
+	size_t    compute_snapshot_size() const override;
 
 	size_t               snap(unsigned char* data, snapper&) const;
 	const unsigned char* snap_load(const unsigned char* data, loader&);
