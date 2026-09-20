@@ -31,8 +31,10 @@ add_executable(
 	MoveTo.cpp
 	ListMatching.cpp
 	Fixes.cpp
+	WhitespaceMode.cpp
 	Migration.cpp
 	MultiRunner.cpp
+	NotAnInkStory.cpp
 )
 
 target_link_libraries(inkcpp_test PUBLIC inkcpp inkcpp_compiler inkcpp_shared)

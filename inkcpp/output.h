@@ -46,7 +46,10 @@ namespace runtime
 			}
 
 			// Returns the number of data items that will be extracted by the next get
-			size_t queued() const;
+			size_t queued();
+
+			// Commit output before extracting a marker-delimited value.
+			void commit_marker_extraction();
 
 			// Peeks the top entry
 			const value& peek() const;
@@ -92,6 +95,25 @@ namespace runtime
 			 */
 			size_t find_first_of(value_type type, size_t offset = 0) const;
 
+			/** Find the first entry in the output for which pred returns true
+			 * @param predicate when evaluate to true will count as match
+			 * @param offset into buffer
+			 * @return index or @ref npos if no entry matches
+			 */
+			template<typename Pred>
+			size_t find_first_of(Pred predicate, size_t offset = 0) const
+			{
+				if (_size == 0) {
+					return npos;
+				}
+				for (size_t i = offset; i < _size; ++i) {
+					if (predicate(_data[i])) {
+						return i;
+					}
+				}
+				return npos;
+			}
+
 			/** Find the last occurrence of the type in the output
 			 * @param type type to look for in the output
 			 * @param offset offset into buffer
@@ -126,12 +148,18 @@ namespace runtime
 
 			char last_char() const { return _last_char; }
 
+			/** @sa ink::runtime::runner_interface::set_whitespace_mode() */
+			void set_whitespace_mode(whitespace_mode mode) { _whitespace_mode = mode; }
+
+			whitespace_mode get_whitespace_mode() const { return _whitespace_mode; }
+
 			// snapshot interface
 			bool                 can_be_migrated() const;
 			size_t               snap(unsigned char* data, const snapper&) const;
 			const unsigned char* snap_load(const unsigned char* data, const loader&);
 
 		private:
+			void   rebase_save(size_t position);
 			size_t find_start() const;
 			bool   should_skip(size_t iter, bool& hasGlue, bool& lastNewline) const;
 
@@ -139,7 +167,8 @@ namespace runtime
 			void copy_string(const char* str, size_t& dataIter, T& output);
 
 		private:
-			char _last_char = '\0';
+			char            _last_char       = '\0';
+			whitespace_mode _whitespace_mode = whitespace_mode::collapse;
 
 			// data stream
 			value* _data = nullptr;

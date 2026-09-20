@@ -55,6 +55,20 @@ public:
 	virtual void set_rng_seed(uint32_t seed) = 0;
 
 	/**
+	 * Sets how runs of whitespace inside a line are treated.
+	 *
+	 * @attention Affects all text produced after this call:
+	 * lines, variables, choice text and tags.
+	 * ! set it before reading the first line.
+	 *
+	 * @attention Not part of a snapshot: runner restored from one starts at the default again.
+	 * but tags an variables already evaluated are uneffected.
+	 *
+	 * @param mode @ref ink::runtime::whitespace_mode "whitespace mode" to use
+	 */
+	virtual void set_whitespace_mode(whitespace_mode mode) = 0;
+
+	/**
 	 * Moves the runner to the specified path.
 	 *
 	 * @sa move_to(const char*) for more conviance
@@ -376,6 +390,8 @@ public:
 	 *
 	 * Returns the choice object at a given index
 	 *
+	 * @attention the returned pointer is only valid until @ref choose is called next; do not
+	 * retain it across a choice being made.
 	 * @see num_choices
 	 * @param index index of the choice to access
 	 * @return choice object with info on the choice
@@ -385,6 +401,8 @@ public:
 	/**
 	 * Shorcut for accessing a choice
 	 *
+	 * @attention the returned pointer is only valid until @ref choose is called next; do not
+	 * retain it across a choice being made.
 	 * @see get_choice
 	 * @param index index of the choice to access
 	 * @return choice object with info on the choice
