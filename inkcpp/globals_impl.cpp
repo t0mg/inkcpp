@@ -295,7 +295,7 @@ size_t globals_impl::stream_snapshot_to(snapshot::writer& w) const
 	hdr.length      = static_cast<uint32_t>(total_length);
 	hdr.hash        = _owner->hash();
 	hdr.migratable  = migratable;
-	hdr.version     = 1;
+	hdr.version     = snapshot_impl::SNAPSHOT_VERSION;
 
 	if (!w.write(&hdr, sizeof(hdr))) {
 		return 0;

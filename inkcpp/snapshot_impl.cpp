@@ -117,7 +117,7 @@ snapshot_impl::snapshot_impl(const globals_impl& globals)
 	_header.num_runners = static_cast<uint32_t>(runner_cnt);
 	_header.hash        = globals._owner->hash();
 	_header.migratable  = migratable;
-	_header.version     = 1;
+	_header.version     = SNAPSHOT_VERSION;
 	unsigned char* data = new unsigned char[_length];
 	_file               = data;
 	unsigned char* ptr  = data;

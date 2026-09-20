@@ -113,12 +113,14 @@ public:
 
 	static size_t                               file_size(size_t, size_t, bool);
 
+	static constexpr uint32_t SNAPSHOT_VERSION = 2;
+
 	struct header {
 		uint32_t num_runners;
 		uint32_t length;
 		hash_t hash;
 		bool   migratable;
-		uint32_t version = 1;
+		uint32_t version = SNAPSHOT_VERSION;
 	} _header;
 
 private:
